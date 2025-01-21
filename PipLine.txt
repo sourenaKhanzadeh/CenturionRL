@@ -1,0 +1,84 @@
++------------------------------------------------------+
+|          Solidity Smart Contract Input               |
++------------------------------------------------------+
+                           |
+                           v
++------------------------------------------------------+
+|                 Preprocessing Phase                  |
+|  +-----------------------------------------------+   |
+|  |            Control Flow Graph (CFG)           |   |
+|  |  - Parse contract and generate CFG structure  |   |
+|  |  - Extract function-level relationships       |   |
+|  |  - Represent control dependencies             |   |
+|  +-----------------------------------------------+   |
+|                                                       |
+|  +-----------------------------------------------+   |
+|  |         Symbolic Execution Analysis           |   |
+|  |  - Path exploration with symbolic inputs      |   |
+|  |  - Gas estimation per execution path          |   |
+|  |  - Detect inefficiencies in contract logic    |   |
+|  +-----------------------------------------------+   |
+|                                                       |
+|  +-----------------------------------------------+   |
+|  |              Feature Extraction               |   |
+|  |  - Opcode-level statistics                    |   |
+|  |  - Function dependencies                      |   |
+|  |  - Storage/memory usage analysis              |   |
+|  +-----------------------------------------------+   |
++------------------------------------------------------+
+                           |
+                           v
++------------------------------------------------------+
+|              State Representation (Encoding)         |
+|  - Convert contract features into numerical vectors  |
+|  - Token embeddings / Graph-based encoding (CFG)     |
+|  - Storage/memory operations encoded as features     |
++------------------------------------------------------+
+                           |
+                           v
++------------------------------------------------------+
+|                Reinforcement Learning                |
+|  +-----------------------------------------------+   |
+|  |                RL Agent (PPO/DQN)             |   |
+|  |  - Takes encoded state as input                |   |
+|  |  - Selects optimization actions                |   |
+|  |  - Learns through trial and error              |   |
+|  +-----------------------------------------------+   |
+|                                                       |
+|  +-----------------------------------------------+   |
+|  |                Action Space                  |   |
+|  |  - Function inlining                          |   |
+|  |  - Loop unrolling                            |   |
+|  |  - Variable packing                          |   |
+|  +-----------------------------------------------+   |
+|                                                       |
+|  +-----------------------------------------------+   |
+|  |               Reward Function                |   |
+|  |  - Gas savings                               |   |
+|  |  - Code size reduction                       |   |
+|  |  - Security compliance                       |   |
+|  +-----------------------------------------------+   |
++------------------------------------------------------+
+                           |
+                           v
++------------------------------------------------------+
+|               Optimization Application                |
+|  - Apply learned transformations to Solidity code     |
+|  - Generate optimized contract version                |
+|  - Measure performance improvements                   |
++------------------------------------------------------+
+                           |
+                           v
++------------------------------------------------------+
+|                    Evaluation                         |
+|  - Compare gas consumption (before vs after)          |
+|  - Security verification with tools (Slither/Mythril) |
+|  - Ensure functional correctness                      |
++------------------------------------------------------+
+                           |
+                           v
++------------------------------------------------------+
+|               Optimized Solidity Contract             |
+|  - Final output with reduced gas costs and            |
+|    verified correctness                               |
++------------------------------------------------------+

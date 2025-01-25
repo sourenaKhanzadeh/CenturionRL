@@ -19,9 +19,6 @@ CFG_OUTPUT_DIR = DATA_DIR / "cfg"
 CFG_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# Get current working directory
-cwd = os.getcwd()
-
 
 def main():
     """
@@ -33,6 +30,9 @@ def main():
             print(f"Processing {contract.name}")
             contract_name = contract.name.split(".")[0]
             contract_path = contract.resolve()
+            if os.path.exists(CFG_OUTPUT_DIR / contract_name):
+                print(f"Skipping {contract_name} because it already exists in {CFG_OUTPUT_DIR}")
+                continue
             try:
                 subprocess.run(["slither", str(contract_path), "--print", "cfg"], check=True)
 

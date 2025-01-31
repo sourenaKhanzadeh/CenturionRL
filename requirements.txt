@@ -1,5 +1,0 @@
-numpy
-networkx
-solc
-pytorch
-torch-geometric

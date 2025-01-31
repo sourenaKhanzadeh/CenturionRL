@@ -1,4 +1,0 @@
-model:
-  type: GNN
-  layers: 3
-  hidden_units: 64

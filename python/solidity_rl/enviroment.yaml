@@ -1,0 +1,38 @@
+name: solidity_rl  # Name of the Anaconda environment
+
+channels:
+  - conda-forge
+  - defaults
+  - pytorch  # Add PyTorch official channel
+
+dependencies:
+  - python=3.10  # Python version
+  - pip
+  - numpy
+  - pandas
+  - scipy
+  - matplotlib
+  - seaborn
+  - tqdm
+  - pyyaml
+  - gymnasium  # OpenAI Gym for RL environments
+  - gymnasium[box2d]  # Optional: If using Box2D environments
+  - stable-baselines3  # RL library for training agents
+  - pytorch  # Install PyTorch from `pytorch` channel
+  - torchvision
+  - torchaudio
+  - tensorflow  # Optional: If considering TensorFlow models
+  - transformers  # Hugging Face Transformers for AI models
+  - jupyterlab  # JupyterLab for notebooks
+  - ipykernel  # Kernel support for Jupyter
+  - pytest  # Testing framework
+  - black  # Code formatting
+  - mypy  # Static type checking
+  - flake8  # Linting
+  - pylint  # Additional linting
+  - pip:
+      - eth-brownie  # Ethereum development framework
+      - solcx  # Solidity compiler interface
+      - web3  # Web3.py for blockchain interactions
+      - redis  # Redis for message queue (if needed)
+      - zmq  # ZeroMQ for inter-process communication (if needed)

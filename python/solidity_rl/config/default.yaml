@@ -1,0 +1,10 @@
+# config/default.yaml
+general:
+  project_name: "SoloRL"
+  version: "1.0"
+logging:
+  level: "INFO"
+rl:
+  algorithm: "PPO"
+  gamma: 0.99
+  learning_rate: 0.0003

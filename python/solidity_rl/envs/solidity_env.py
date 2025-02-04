@@ -1,66 +1,124 @@
 import numpy as np
+import gym
+from gym import spaces
+from typing import Dict, Tuple
+from solidity_rl.envs.action_space import ContinuousActionSpace
+from solidity_rl.envs.reward_function import RewardFunction
+from solidity_rl.envs.state_representation import StateRepresentation
 
-class RewardFunction:
+class SolidityOptimizationEnv(gym.Env):
+    """
+    OpenAI Gym-compatible environment for Solidity smart contract optimization.
+    Uses a continuous action space and rewards based on gas efficiency.
+    """
+
     def __init__(self):
-        """
-        Defines the reward function for Solidity optimization in a continuous space.
-        The goal is to reduce gas usage, maintain correctness, and improve execution efficiency.
-        """
-        # Weight factors for different optimization metrics
-        self.weights = {
-            "gas_reduction": 1.0,  # Main objective: Lower gas cost
-            "execution_speed": 0.5,  # Secondary: Improve efficiency
-            "contract_size": -0.2,  # Smaller contracts get a bonus
-            "correctness_penalty": -10.0  # Strong penalty for breaking functionality
-        }
+        super(SolidityOptimizationEnv, self).__init__()
 
-    def compute_reward(self, before_metrics: dict, after_metrics: dict) -> float:
-        """
-        Computes the reward based on Solidity optimization impact.
+        # Define action space (continuous)
+        self.action_space = ContinuousActionSpace()
 
-        Args:
-            before_metrics (dict): Solidity contract metrics before applying an action.
-            after_metrics (dict): Solidity contract metrics after applying an action.
-
-        Returns:
-            float: Calculated reward.
-        """
-        gas_saved = before_metrics["gas_cost"] - after_metrics["gas_cost"]
-        execution_gain = before_metrics["execution_time"] - after_metrics["execution_time"]
-        size_change = after_metrics["contract_size"] - before_metrics["contract_size"]
-        correctness_violation = after_metrics["correctness"]  # 1 if incorrect, 0 if correct
-
-        # Compute weighted reward
-        reward = (
-            self.weights["gas_reduction"] * gas_saved +
-            self.weights["execution_speed"] * execution_gain +
-            self.weights["contract_size"] * size_change +
-            self.weights["correctness_penalty"] * correctness_violation
+        # Define observation space (Solidity contract metrics)
+        self.observation_space = spaces.Box(
+            low=np.array([0, 0, 0, 0, 0, 0, 0]),  # Min values for [gas cost, execution time, contract size, function_count, loop_count, storage_vars, correctness]
+            high=np.array([1e6, 1e6, 1e6, 100, 50, 100, 1]),  # Max values
+            dtype=np.float32
         )
 
-        return reward
+        # Reward function and state representation
+        self.reward_function = RewardFunction()
+        self.state_representation = StateRepresentation()
 
-    def normalize_reward(self, reward: float) -> float:
+        # Initialize Solidity contract state (metrics before optimization)
+        self.state = {
+            "gas_cost": np.random.uniform(10000, 100000),  # Initial gas cost
+            "execution_time": np.random.uniform(10, 1000),  # Execution time in ms
+            "contract_size": np.random.uniform(1000, 10000),  # Contract size in bytes
+            "function_count": np.random.randint(1, 50),  # Number of functions
+            "loop_count": np.random.randint(0, 20),  # Number of loops
+            "storage_vars": np.random.randint(1, 50),  # Number of storage variables
+            "correctness": 0  # 0 = correct, 1 = incorrect (breaks logic)
+        }
+
+    def reset(self) -> np.ndarray:
         """
-        Normalizes the reward to a fixed range (e.g., -1 to 1).
-
-        Args:
-            reward (float): Raw reward.
+        Resets the environment to an initial state.
 
         Returns:
-            float: Normalized reward.
+            np.ndarray: Initial observation (encoded Solidity contract metrics).
         """
-        return np.tanh(reward)  # Keeps reward bounded within [-1, 1]
+        self.state = {
+            "gas_cost": np.random.uniform(10000, 100000),
+            "execution_time": np.random.uniform(10, 1000),
+            "contract_size": np.random.uniform(1000, 10000),
+            "function_count": np.random.randint(1, 50),
+            "loop_count": np.random.randint(0, 20),
+            "storage_vars": np.random.randint(1, 50),
+            "correctness": 0
+        }
+        return self.state_representation.encode(self.state)
 
-    def evaluate_termination(self, after_metrics: dict) -> bool:
+    def step(self, action: Tuple[int, float]) -> Tuple[np.ndarray, float, bool, Dict]:
         """
-        Determines if the optimization process should terminate.
+        Applies an optimization action and returns the new state, reward, and termination flag.
 
         Args:
-            after_metrics (dict): Solidity contract metrics after optimization.
+            action (Tuple[int, float]): (Category index, continuous parameter).
 
         Returns:
-            bool: True if optimization should stop (no more improvements), else False.
+            Tuple[np.ndarray, float, bool, Dict]: New state, reward, done flag, and extra info.
         """
-        return after_metrics["gas_cost"] <= 0 or after_metrics["correctness"] == 1
+        category_idx, action_value = action
+        category = self.action_space.get_action_by_index(category_idx)
 
+        # Apply optimization effects based on the action category
+        if category == "storage_optimization":
+            self.state["gas_cost"] -= action_value * 500  # Reduce gas by up to 500 units
+            self.state["contract_size"] += action_value * 10  # Slight contract size increase
+        elif category == "loop_optimization":
+            self.state["execution_time"] *= (1 - action_value / 2)  # Reduce execution time
+        elif category == "function_inline":
+            self.state["gas_cost"] *= (1 - action_value / 4)  # Moderate gas reduction
+        elif category == "require_replacement":
+            self.state["gas_cost"] -= action_value * 300  # Reduce gas cost slightly
+        elif category == "expression_simplification":
+            self.state["gas_cost"] *= (1 - action_value / 3)  # Reduce gas by up to 33%
+
+        # Ensure values stay within realistic bounds
+        self.state["gas_cost"] = max(self.state["gas_cost"], 0)
+        self.state["execution_time"] = max(self.state["execution_time"], 1)
+        self.state["contract_size"] = max(self.state["contract_size"], 500)
+
+        # Random chance of breaking correctness (5% probability)
+        if np.random.uniform(0, 1) < 0.05:
+            self.state["correctness"] = 1  # Invalid contract state
+
+        # Compute reward
+        reward = self.reward_function.compute_reward(
+            before_metrics=self.state,
+            after_metrics=self.state
+        )
+        reward = self.reward_function.normalize_reward(reward)
+
+        # Check termination condition
+        done = self.reward_function.evaluate_termination(self.state)
+
+        return self.state_representation.encode(self.state), reward, done, {}
+
+    def render(self, mode="human"):
+        """
+        Displays the current environment state.
+        """
+        print(f"Gas Cost: {self.state['gas_cost']:.2f}, "
+              f"Execution Time: {self.state['execution_time']:.2f} ms, "
+              f"Contract Size: {self.state['contract_size']} bytes, "
+              f"Function Count: {self.state['function_count']}, "
+              f"Loop Count: {self.state['loop_count']}, "
+              f"Storage Vars: {self.state['storage_vars']}, "
+              f"Correctness: {'✅' if self.state['correctness'] == 0 else '❌'}")
+
+    def close(self):
+        """
+        Cleanup resources if needed.
+        """
+        pass

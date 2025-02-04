@@ -16,3 +16,5 @@ target/
 
 # Ignore all files in the logs directory
 logs/
+
+solidity_rl.egg-info/

@@ -1,12 +1,55 @@
-class BaseAgent:
-    """Base class for RL agents."""
+import abc
+import numpy as np
+import torch
 
-    def __init__(self, state_dim, action_dim):
-        self.state_dim = state_dim
-        self.action_dim = action_dim
+class BaseAgent(abc.ABC):
+    """
+    Abstract base class for RL agents in Solidity optimization.
+    All agents must implement train_step() and select_action().
+    """
 
-    def select_action(self, state):
-        raise NotImplementedError("This method should be overridden by subclasses.")
+    def __init__(self, action_space, state_shape, device="cpu"):
+        self.action_space = action_space
+        self.state_shape = state_shape
+        self.device = torch.device(device)
 
-    def train(self, experiences):
-        raise NotImplementedError("This method should be overridden by subclasses.")
+    @abc.abstractmethod
+    def select_action(self, state: np.ndarray) -> np.ndarray:
+        """
+        Selects an action based on the current state.
+
+        Args:
+            state (np.ndarray): The current environment state.
+
+        Returns:
+            np.ndarray: Selected action.
+        """
+        pass
+
+    @abc.abstractmethod
+    def train_step(self, batch):
+        """
+        Performs a training step on a batch of experiences.
+
+        Args:
+            batch (dict): Batch of experiences.
+        """
+        pass
+
+    def save_model(self, path):
+        """
+        Saves the trained model.
+
+        Args:
+            path (str): Path to save the model.
+        """
+        torch.save(self.model.state_dict(), path)
+
+    def load_model(self, path):
+        """
+        Loads a trained model.
+
+        Args:
+            path (str): Path to the saved model.
+        """
+        self.model.load_state_dict(torch.load(path, map_location=self.device))

@@ -1,43 +1,98 @@
-import gym
+import argparse
+import yaml
+import os
 import torch
 import numpy as np
+from solidity_rl.agents import PPOAgent, DQNAgent, A2CAgent, SACAgent, TD3Agent
 from solidity_rl.envs.solidity_env import SolidityOptimizationEnv
-from solidity_rl.agents.ppo_agent import PPOAgent  # Change this to your selected agent
-from solidity_rl.utils.logger import Logger
+from solidity_rl.utils.logger import setup_logger
+from solidity_rl.utils.config_loader import load_config
 
-# Hyperparameters
-EPISODES = 500
-BATCH_SIZE = 64
-GAMMA = 0.99
-LEARNING_RATE = 3e-4
 
-# Initialize environment and agent
-env = SolidityOptimizationEnv()
-state_shape = env.observation_space.shape[0]
-action_space = env.action_space
-agent = PPOAgent(state_shape, action_space, lr=LEARNING_RATE, gamma=GAMMA)
+def set_seed(seed):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
-logger = Logger(log_dir="logs")
 
-# Training loop
-for episode in range(EPISODES):
-    state = env.reset()
-    total_reward = 0
-    done = False
-    episode_data = []
+def select_agent(agent_name, env, config):
+    agents = {
+        'ppo': PPOAgent,
+        'dqn': DQNAgent,
+        'a2c': A2CAgent,
+        'sac': SACAgent,
+        'td3': TD3Agent
+    }
+    state_shape = env.observation_space.shape[0]
+    action_space = env.action_space
 
-    while not done:
-        action = agent.select_action(state)
-        next_state, reward, done, _ = env.step(action)
-        agent.train_step([(state, action, reward, next_state, done)])
-        total_reward += reward
-        state = next_state
+    # Filter out 'type' from agent config
+    agent_config = {k: v for k, v in config['agent'].items() if k != 'type'}
 
-    logger.log_metric("episode_reward", total_reward, episode)
-    print(f"Episode {episode + 1}/{EPISODES}: Total Reward = {total_reward:.2f}")
+    return agents[agent_name.lower()](state_shape, action_space, **agent_config)
 
-# Save trained model
-agent.save_model("models/ppo_solidity_optimized.pth")
 
-# Cleanup
-env.close()
+def train(agent, env, config, logger):
+    num_episodes = config['training']['num_episodes']
+    max_steps = config['training']['max_steps']
+
+    for episode in range(num_episodes):
+        state = env.reset()
+        total_reward = 0
+        episode_transitions = []  # Buffer to collect transitions for PPO
+
+        for step in range(max_steps):
+            action = agent.select_action(state)
+            
+            # Ensure action is a tuple of two elements
+            if not isinstance(action, (tuple, list)) or len(action) != 2:
+                action = (action, 0)  # Default second value if missing
+
+            # Convert category_idx to integer if it's a numpy array
+            category_idx = int(action[0][0]) if isinstance(action[0], np.ndarray) else int(action[0])
+            action_value = action[1]
+            formatted_action = (category_idx, action_value)
+
+            next_state, reward, done, _ = env.step(formatted_action)
+            
+            # Collect transitions for PPO batch update
+            episode_transitions.append((state, formatted_action, reward, next_state, done))
+            
+            state = next_state
+            total_reward += reward
+
+            if done:
+                break
+
+        # Perform PPO update at the end of the episode
+        agent.train_step(episode_transitions)
+
+        logger.info(f"Episode {episode + 1}/{num_episodes} - Total Reward: {total_reward}")
+
+        if episode % config['training']['save_interval'] == 0:
+            agent.save_model(f"{config['paths']['checkpoints']}/model_episode_{episode}.pth")
+
+    logger.info("Training completed.")
+
+
+
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Train RL agent for Solidity optimization.')
+    parser.add_argument('--config', type=str, default='python/solidity_rl/config/rl_setting.yaml', help='Path to config file.')
+    args = parser.parse_args()
+
+    config = load_config(args.config)
+    set_seed(config['training']['seed'])
+
+    env = SolidityOptimizationEnv()
+    agent = select_agent(config['agent']['type'], env, config)
+    logger = setup_logger(config['paths']['log'])
+
+    train(agent, env, config, logger)
+
+
+if __name__ == '__main__':
+    main()

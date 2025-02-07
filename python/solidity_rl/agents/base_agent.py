@@ -8,10 +8,11 @@ class BaseAgent(abc.ABC):
     All agents must implement train_step() and select_action().
     """
 
-    def __init__(self, action_space, state_shape, device="cpu"):
+    def __init__(self, action_space, state_shape, device="cpu", model=None):
         self.action_space = action_space
         self.state_shape = state_shape
         self.device = torch.device(device)
+        self.model = model
 
     @abc.abstractmethod
     def select_action(self, state: np.ndarray) -> np.ndarray:
@@ -43,7 +44,10 @@ class BaseAgent(abc.ABC):
         Args:
             path (str): Path to save the model.
         """
-        torch.save(self.model.state_dict(), path)
+        if type(self.model) is not dict:
+            torch.save(self.model.state_dict(), path)
+        else:
+            torch.save(self.model, path)
 
     def load_model(self, path):
         """

@@ -25,7 +25,11 @@ class PPOAgent(BaseAgent):
             nn.Linear(128, 1)
         ).to(self.device)
 
+        # Combined model for saving
+        self.model = {'policy': self.policy, 'value_function': self.value_function}
+
         self.optimizer = optim.Adam(list(self.policy.parameters()) + list(self.value_function.parameters()), lr=lr)
+
 
     def select_action(self, state):
         state_tensor = torch.FloatTensor(state).to(self.device)

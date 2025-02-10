@@ -1,0 +1,3 @@
+[submodule "python/draw_arch"]
+	path = python/draw_arch
+	url = https://github.com/sourenaKhanzadeh/draw_arch.git

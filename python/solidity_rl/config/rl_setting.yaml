@@ -10,16 +10,17 @@ environment:
   reward_scale: 1.0
 
 training:
-  num_episodes: 10000
+  num_episodes: 1000
   max_steps: 1000
   seed: 42
-  save_interval: 10000
+  save_interval: 1000
   eval_interval: 50
 
 paths:
   log: ""
   checkpoints: python/solidity_rl/models/checkpoints
   results: python/solidity_rl/data/results/
+  contracts: python/solidity_rl/data/raw_contracts
 
 hardware:
   use_cuda: true

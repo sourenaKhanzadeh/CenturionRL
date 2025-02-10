@@ -18,17 +18,12 @@ def parse_contract(contract_path: str):
 
     with open(contract_path, "r", encoding="utf-8") as file:
         contract_source = file.read()
-        
-        # Extract Solidity version from pragma
-        version = re.search(r"pragma solidity\s+([^\s]+);", contract_source)
-        version = version.group(1) if version else "0.8.0"
-        version = re.sub("[^0-9.]", "", version)  # Keep only version numbers and dots
-        
-        print(f"Using Solidity version: {version}")
 
-    # Install Solidity version if not available
+    version_match = re.search(r"pragma solidity\s+([^\s]+);", contract_source)
+    version = version_match.group(1) if version_match else "0.8.0"
+    version = re.sub("[^0-9.]", "", version)
+
     if version not in get_installed_solc_versions():
-        print(f"Installing Solidity version {version}...")
         install_solc(version)
 
     try:
@@ -36,18 +31,11 @@ def parse_contract(contract_path: str):
             {
                 "language": "Solidity",
                 "sources": {os.path.basename(contract_path): {"content": contract_source}},
-                "settings": {
-                    "outputSelection": {
-                        "*": {
-                            "": ["ast"],  # This ensures AST is generated for the entire contract
-                        }
-                    }
-                },
+                "settings": {"outputSelection": {"*": {"": ["ast"]}}},
             },
             solc_version=version,
         )
 
-        # The AST should now be at the top level, not under "contracts"
         if "sources" not in compiled_contract or os.path.basename(contract_path) not in compiled_contract["sources"]:
             raise ValueError("Compilation output does not contain expected AST data.")
 
@@ -55,8 +43,9 @@ def parse_contract(contract_path: str):
         return ast
 
     except Exception as e:
-        print(f"Compilation Output: {json.dumps(compiled_contract, indent=2)}")
-        raise ValueError(f"Error parsing contract: {e}")
+        print(f"Error parsing contract: {e}")
+        raise e  # Re-raise the exception after logging to prevent UnboundLocalError
+
 
 # Example Usage
 if __name__ == "__main__":

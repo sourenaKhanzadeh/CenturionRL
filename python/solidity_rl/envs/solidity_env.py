@@ -1,5 +1,6 @@
 import numpy as np
 import gym
+import os
 from gym import spaces
 from typing import Dict, Tuple
 from solidity_rl.envs.action_space import ContinuousActionSpace
@@ -122,3 +123,14 @@ class SolidityOptimizationEnv(gym.Env):
         Cleanup resources if needed.
         """
         pass
+    
+
+    def load_contract_ast(self, contract_ast):
+        """
+        Loads the contract AST into the environment for optimization.
+        
+        Args:
+            contract_ast (dict): The parsed Abstract Syntax Tree of the Solidity contract.
+        """
+        # Here you can process the AST to extract relevant metrics for optimization
+        self.state = self.state_representation.extract_metrics_from_ast(contract_ast)

@@ -63,3 +63,32 @@ class StateRepresentation:
             int: Number of state features.
         """
         return self.num_features
+
+    def extract_metrics_from_ast(self, contract_ast: dict) -> dict:
+        """
+        Extracts metrics from the Solidity AST to initialize the environment state.
+
+        Args:
+            contract_ast (dict): The parsed AST of a Solidity contract.
+
+        Returns:
+            dict: Extracted metrics including gas cost, execution time, contract size, etc.
+        """
+        # Example logic for extracting metrics (this should be adapted to your specific AST structure)
+        gas_cost = contract_ast.get('gas_cost', 100000)
+        execution_time = contract_ast.get('execution_time', 500)
+        contract_size = contract_ast.get('contract_size', 3000)
+        function_count = len(contract_ast.get('nodes', []))
+        loop_count = sum(1 for node in contract_ast.get('nodes', []) if node.get('name') == 'ForStatement')
+        storage_vars = sum(1 for node in contract_ast.get('nodes', []) if node.get('name') == 'StateVariableDeclaration')
+        correctness = 0  # Default to correct until proven otherwise
+
+        return {
+            "gas_cost": gas_cost,
+            "execution_time": execution_time,
+            "contract_size": contract_size,
+            "function_count": function_count,
+            "loop_count": loop_count,
+            "storage_vars": storage_vars,
+            "correctness": correctness
+        }

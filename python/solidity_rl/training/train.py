@@ -3,10 +3,12 @@ import yaml
 import os
 import torch
 import numpy as np
+import gc
 from solidity_rl.agents import PPOAgent, DQNAgent, A2CAgent, SACAgent, TD3Agent
 from solidity_rl.envs.solidity_env import SolidityOptimizationEnv
 from solidity_rl.utils.logger import setup_logger
 from solidity_rl.utils.config_loader import load_config
+from solidity_rl.utils.contract_parser import parse_contract
 
 
 def set_seed(seed):
@@ -37,14 +39,24 @@ def train(agent, env, config, logger):
     num_episodes = config['training']['num_episodes']
     max_steps = config['training']['max_steps']
 
+    contract_dir = config['paths']['contracts']
+    contract_files = [f for f in os.listdir(contract_dir) if f.endswith('.sol')]
+
     for episode in range(num_episodes):
+        contract_file = np.random.choice(contract_files)
+        contract_path = os.path.join(contract_dir, contract_file)
+
+        # Parse contract to AST and load into environment
+        contract_ast = parse_contract(contract_path)
+        env.load_contract_ast(contract_ast)
+
         state = env.reset()
         total_reward = 0
-        episode_transitions = []  # Buffer to collect transitions for PPO
+        episode_transitions = []
 
         for step in range(max_steps):
             action = agent.select_action(state)
-            
+
             # Ensure action is a tuple of two elements
             if not isinstance(action, (tuple, list)) or len(action) != 2:
                 action = (action, 0)  # Default second value if missing
@@ -55,28 +67,24 @@ def train(agent, env, config, logger):
             formatted_action = (category_idx, action_value)
 
             next_state, reward, done, _ = env.step(formatted_action)
-            
-            # Collect transitions for PPO batch update
+
             episode_transitions.append((state, formatted_action, reward, next_state, done))
-            
+
             state = next_state
             total_reward += reward
 
             if done:
                 break
 
-        # Perform PPO update at the end of the episode
         agent.train_step(episode_transitions)
 
         logger.info(f"Episode {episode + 1}/{num_episodes} - Total Reward: {total_reward}")
 
         if episode % config['training']['save_interval'] == 0:
             agent.save_model(f"{config['paths']['checkpoints']}/model_episode_{episode}.pth")
+        
 
     logger.info("Training completed.")
-
-
-
 
 
 def main():

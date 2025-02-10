@@ -6,16 +6,24 @@ from solidity_rl.agents.ppo_agent import PPOAgent  # Change agent if needed
 from solidity_rl.utils.contract_parser import parse_contract
 
 # Load trained model
-MODEL_PATH = "models/ppo_solidity_optimized.pth"
+MODEL_PATH = "python/solidity_rl/models/checkpoints/model_episode_0.pth"
 
 # Initialize environment and agent
 env = SolidityOptimizationEnv()
 state_shape = env.observation_space.shape[0]
 agent = PPOAgent(state_shape, env.action_space)
-agent.load_model(MODEL_PATH)
+try:
+    agent.load_model(MODEL_PATH)
+except Exception as e:
+    print(f"Error loading model: {e}")
+finally:
+    # load model as dict
+    agent.model = torch.load(MODEL_PATH)
+    print("Model loaded successfully")
+
 
 # Load Solidity contract
-CONTRACT_PATH = "contracts/sample.sol"
+CONTRACT_PATH = "python/solidity_rl/data/raw_contracts/simple.sol"
 contract_metrics = parse_contract(CONTRACT_PATH)
 state = np.array([contract_metrics["gas_cost"], contract_metrics["execution_time"], contract_metrics["contract_size"]])
 

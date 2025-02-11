@@ -1,52 +1,66 @@
+from typing import Dict, List, Any
 from web3 import Web3
-import json
-import os
 
-def estimate_gas(contract_path: str, function_name: str, args=None, rpc_url="http://127.0.0.1:8545"):
+
+def estimate_gas(contract_address:str, contract_abi:list, w3:Web3) -> Dict[str, int]:
     """
     Estimates the gas usage of a given function in a Solidity contract.
 
     Args:
-        contract_path (str): Path to the compiled Solidity contract ABI & Bytecode.
-        function_name (str): Name of the function to estimate gas for.
-        args (tuple, optional): Arguments for the contract function. Defaults to None.
-        rpc_url (str): RPC URL of the Ethereum node (Ganache, Hardhat, or real network).
+        contract_address (str): Address of the deployed contract.
+        contract_abi (list): ABI of the deployed contract.
+        w3 (Web3): Web3 instance.
 
     Returns:
         int: Estimated gas usage.
     """
-    if not os.path.exists(contract_path):
-        raise FileNotFoundError(f"Compiled contract JSON not found: {contract_path}")
+    contract = w3.eth.contract(address=contract_address, abi=contract_abi)
+    gas_usage = {}
 
-    # Load compiled contract
-    with open(contract_path, "r", encoding="utf-8") as file:
-        contract_data = json.load(file)
+    for func_abi in contract_abi:
+        if func_abi.get('type') != 'function':
+            continue
+        
+        func_name = func_abi['name']
+        func_instance = getattr(contract.functions, func_name)
+        
+        try:
+            args = generate_default_args(func_abi.get('inputs', []))
+            gas_estimate = func_instance(*args).estimate_gas({'from': w3.eth.default_account})
+            gas_usage[func_name] = gas_estimate
+        except Exception as e:
+            gas_usage[func_name] = f"Error estimating gas: {e}"
+        
+    return gas_usage
 
-    bytecode = contract_data["bytecode"]
-    abi = contract_data["abi"]
 
-    # Connect to Web3
-    w3 = Web3(Web3.HTTPProvider(rpc_url))
-    if not w3.is_connected():
-        raise ConnectionError("Failed to connect to Ethereum node.")
+def generate_default_args(abi_inputs: list) -> List[Any]:
+    """
+    Generates default arguments for a given ABI.
 
-    # Deploy contract
-    Contract = w3.eth.contract(abi=abi, bytecode=bytecode)
-    tx_hash = Contract.constructor().transact({"from": w3.eth.accounts[0]})
-    tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
-    contract_instance = w3.eth.contract(address=tx_receipt.contractAddress, abi=abi)
+    Args:
+        abi_inputs (list): ABI inputs.
 
-    # Estimate gas for function call
-    gas_estimate = contract_instance.functions[function_name](*args).estimate_gas({"from": w3.eth.accounts[0]})
-    
-    return gas_estimate
+    Returns:
+        list: Default arguments.
+    """
+    args = []
+    for input_arg in abi_inputs:
+        if not isinstance(input_arg, dict):
+            continue  # Skip if input_arg is not a dict
+        arg_type = input_arg.get('type', '')
+        if arg_type.startswith('uint'):
+            args.append(0)
+        elif arg_type == 'string':
+            args.append("")
+        elif arg_type == 'address':
+            args.append('0x0000000000000000000000000000000000000000')
+        elif arg_type.startswith('bool'):
+            args.append(False)
+        elif arg_type.endswith('[]'):
+            args.append([])
+        else:
+            args.append(None)
+    return args
 
-# Example Usage
-if __name__ == "__main__":
-    compiled_contract_path = "contracts/compiled/SampleContract.json"
-    
-    try:
-        gas_used = estimate_gas(compiled_contract_path, "increment")
-        print(f"Estimated Gas Usage: {gas_used}")
-    except Exception as e:
-        print(f"Gas estimation failed: {e}")
+

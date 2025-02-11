@@ -1,69 +1,35 @@
-import numpy as np
+import time
+import sys
+from typing import Tuple, Callable, Dict
 
-def moving_average(data, window_size=10):
-    """
-    Computes a moving average over the given data.
+def get_execution_time_and_size(contract_code: str, func: Callable) -> Tuple[float, int]:
+    contract_size = sys.getsizeof(contract_code)
+    start_time = time.time()
+    res = func()
+    execution_time = time.time() - start_time
+    return execution_time, contract_size, res
 
-    Args:
-        data (list or np.array): List of values (e.g., rewards, gas savings).
-        window_size (int): Number of elements to average.
+def extract_contract_metrics(ast: Dict) -> Tuple[int, int, int]:
+    function_count, loop_count, storage_vars = 0, 0, 0
 
-    Returns:
-        np.array: Smoothed moving average.
-    """
-    if len(data) < window_size:
-        return np.array(data)  # Return original data if not enough points
-    
-    return np.convolve(data, np.ones(window_size)/window_size, mode='valid')
+    def recursive_search(node):
+        nonlocal function_count, loop_count, storage_vars
+        if isinstance(node, dict):
+            if node.get('nodeType') == 'FunctionDefinition':
+                function_count += 1
+            elif node.get('nodeType') in ['ForStatement', 'WhileStatement', 'DoWhileStatement']:
+                loop_count += 1
+            elif node.get('nodeType') == 'VariableDeclaration' and node.get('storageLocation') == 'storage':
+                storage_vars += 1
 
-def compute_gas_savings_metrics(original_gas, optimized_gas):
-    """
-    Computes gas savings metrics.
+            for _, value in node.items():
+                if isinstance(value, (dict, list)):
+                    recursive_search(value)
+        elif isinstance(node, list):
+            for item in node:
+                recursive_search(item)
 
-    Args:
-        original_gas (list or np.array): Gas usage before optimization.
-        optimized_gas (list or np.array): Gas usage after optimization.
+    recursive_search(ast)
+    return function_count, loop_count, storage_vars
 
-    Returns:
-        dict: Dictionary containing min, max, avg gas savings.
-    """
-    savings = np.maximum(((np.array(original_gas) - np.array(optimized_gas)) / np.array(original_gas)) * 100, 0)
 
-    return {
-        "min_savings": np.min(savings),
-        "max_savings": np.max(savings),
-        "avg_savings": np.mean(savings),
-    }
-
-def compute_training_performance(reward_history):
-    """
-    Computes training performance metrics.
-
-    Args:
-        reward_history (list or np.array): List of rewards over episodes.
-
-    Returns:
-        dict: Dictionary containing avg, min, max rewards.
-    """
-    reward_array = np.array(reward_history)
-
-    return {
-        "avg_reward": np.mean(reward_array),
-        "max_reward": np.max(reward_array),
-        "min_reward": np.min(reward_array),
-        "std_reward": np.std(reward_array),
-    }
-
-# Example Usage
-if __name__ == "__main__":
-    rewards = np.random.randint(-50, 100, 50)
-    original_gas = np.random.randint(5000, 20000, 50)
-    optimized_gas = original_gas * np.random.uniform(0.5, 0.9, len(original_gas))
-
-    smoothed_rewards = moving_average(rewards)
-    gas_metrics = compute_gas_savings_metrics(original_gas, optimized_gas)
-    training_metrics = compute_training_performance(rewards)
-
-    print("Smoothed Rewards:", smoothed_rewards)
-    print("Gas Savings Metrics:", gas_metrics)
-    print("Training Metrics:", training_metrics)

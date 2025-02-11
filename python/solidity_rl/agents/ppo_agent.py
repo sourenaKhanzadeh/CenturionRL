@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
 from .base_agent import BaseAgent
 
 class PPOAgent(BaseAgent):

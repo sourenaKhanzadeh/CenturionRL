@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-import random
 from collections import deque
 from .base_agent import BaseAgent
 
@@ -38,11 +37,11 @@ class DQNAgent(BaseAgent):
             q_values = self.model(state_tensor)
             return np.argmax(q_values.cpu().numpy())
 
-    def train_step(self):
+    def train_step(self, batch):
         if len(self.memory) < self.batch_size:
             return
 
-        batch = random.sample(self.memory, self.batch_size)
+        # batch = random.sample(self.memory, self.batch_size)
         states, actions, rewards, next_states, dones = zip(*batch)
 
         states = torch.FloatTensor(states).to(self.device)

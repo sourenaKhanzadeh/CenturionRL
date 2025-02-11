@@ -1,5 +1,4 @@
 import torch
-import gym
 import numpy as np
 from solidity_rl.envs.solidity_env import SolidityOptimizationEnv
 from solidity_rl.agents.ppo_agent import PPOAgent  # Change agent if needed

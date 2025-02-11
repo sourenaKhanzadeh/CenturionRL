@@ -1,9 +1,7 @@
 import argparse
-import yaml
 import os
 import torch
 import numpy as np
-import gc
 from solidity_rl.agents import PPOAgent, DQNAgent, A2CAgent, SACAgent, TD3Agent
 from solidity_rl.envs.solidity_env import SolidityOptimizationEnv
 from solidity_rl.utils.logger import setup_logger
@@ -54,7 +52,7 @@ def train(agent, env, config, logger):
         total_reward = 0
         episode_transitions = []
 
-        for step in range(max_steps):
+        for _ in range(max_steps):
             action = agent.select_action(state)
 
             # Ensure action is a tuple of two elements

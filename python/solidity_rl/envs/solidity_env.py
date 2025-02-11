@@ -1,6 +1,5 @@
 import numpy as np
 import gym
-import os
 from gym import spaces
 from typing import Dict, Tuple
 from solidity_rl.envs.action_space import ContinuousActionSpace
@@ -13,9 +12,10 @@ class SolidityOptimizationEnv(gym.Env):
     Uses a continuous action space and rewards based on gas efficiency.
     """
 
-    def __init__(self):
+    def __init__(self, contract_pth: str):
         super(SolidityOptimizationEnv, self).__init__()
-
+        self.contract_pth = contract_pth
+        
         # Define action space (continuous)
         self.action_space = ContinuousActionSpace()
 
@@ -41,7 +41,7 @@ class SolidityOptimizationEnv(gym.Env):
             "correctness": 0  # 0 = correct, 1 = incorrect (breaks logic)
         }
 
-    def reset(self) -> np.ndarray:
+    def reset(self, **kwargs: Dict) -> np.ndarray:
         """
         Resets the environment to an initial state.
 
@@ -55,7 +55,8 @@ class SolidityOptimizationEnv(gym.Env):
             "function_count": np.random.randint(1, 50),
             "loop_count": np.random.randint(0, 20),
             "storage_vars": np.random.randint(1, 50),
-            "correctness": 0
+            "correctness": 0,
+            **kwargs
         }
         return self.state_representation.encode(self.state)
 
@@ -110,20 +111,24 @@ class SolidityOptimizationEnv(gym.Env):
         """
         Displays the current environment state.
         """
-        print(f"Gas Cost: {self.state['gas_cost']:.2f}, "
-              f"Execution Time: {self.state['execution_time']:.2f} ms, "
-              f"Contract Size: {self.state['contract_size']} bytes, "
-              f"Function Count: {self.state['function_count']}, "
-              f"Loop Count: {self.state['loop_count']}, "
-              f"Storage Vars: {self.state['storage_vars']}, "
-              f"Correctness: {'✅' if self.state['correctness'] == 0 else '❌'}")
+        if mode == "human":
+            print(f"Gas Cost: {self.state['gas_cost']:.2f}, "
+                f"Execution Time: {self.state['execution_time']:.2f} ms, "
+                f"Contract Size: {self.state['contract_size']} bytes, "
+                f"Function Count: {self.state['function_count']}, "
+                f"Loop Count: {self.state['loop_count']}, "
+                f"Storage Vars: {self.state['storage_vars']}, "
+                f"Correctness: {'✅' if self.state['correctness'] == 0 else '❌'}")
 
     def close(self):
         """
         Cleanup resources if needed.
         """
-        pass
-    
+        self.state = None
+        self.state_representation = None
+        self.reward_function = None
+        self.action_space = None
+        self.observation_space = None
 
     def load_contract_ast(self, contract_ast):
         """

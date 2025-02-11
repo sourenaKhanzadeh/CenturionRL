@@ -3,22 +3,14 @@ import json
 import re
 from solcx import compile_standard, install_solc, get_installed_solc_versions
 
-def parse_contract(contract_path: str):
+def parse_contract(contract_pth: str):
     """
-    Parses a Solidity contract and returns its Abstract Syntax Tree (AST).
-
-    Args:
-        contract_path (str): Path to the Solidity contract (.sol file).
-
-    Returns:
-        dict: Parsed AST of the Solidity contract.
+    Parse the Solidity contract and return AST, ABI & Bytecode.
     """
-    if not os.path.exists(contract_path):
-        raise FileNotFoundError(f"Contract file not found: {contract_path}")
-
-    with open(contract_path, "r", encoding="utf-8") as file:
+    with open(contract_pth, "r", encoding="utf-8") as file:
         contract_source = file.read()
 
+    # Extract Solidity version from pragma
     version_match = re.search(r"pragma solidity\s+([^\s]+);", contract_source)
     version = version_match.group(1) if version_match else "0.8.0"
     version = re.sub("[^0-9.]", "", version)
@@ -30,21 +22,41 @@ def parse_contract(contract_path: str):
         compiled_contract = compile_standard(
             {
                 "language": "Solidity",
-                "sources": {os.path.basename(contract_path): {"content": contract_source}},
-                "settings": {"outputSelection": {"*": {"": ["ast"]}}},
+                "sources": {os.path.basename(contract_pth): {"content": contract_source}},
+                "settings": {
+                    "outputSelection": {
+                        "*": {
+                            "*": ["abi", "evm.bytecode.object", "metadata"],
+                            "": ["ast"]
+                        }
+                    }
+                },
             },
             solc_version=version,
         )
 
-        if "sources" not in compiled_contract or os.path.basename(contract_path) not in compiled_contract["sources"]:
-            raise ValueError("Compilation output does not contain expected AST data.")
 
-        ast = compiled_contract["sources"][os.path.basename(contract_path)]["ast"]
-        return ast
+        # Attempt to retrieve AST from 'sources'
+        ast = compiled_contract.get("sources", {}).get(os.path.basename(contract_pth), {}).get("ast")
+        contract_data = None
+        contract_name = None
+
+        # Fallback if AST is not found in 'sources'
+    
+        contract_data = compiled_contract["contracts"][os.path.basename(contract_pth)]
+        contract_name = next(iter(contract_data))
+
+        if not ast:
+            raise ValueError("AST not found in the compiled contract output.")
+
+        abi = contract_data[contract_name]["abi"]
+        bytecode = contract_data[contract_name]["evm"]["bytecode"]["object"]
+
+        return ast, abi, bytecode
 
     except Exception as e:
         print(f"Error parsing contract: {e}")
-        raise e  # Re-raise the exception after logging to prevent UnboundLocalError
+        raise e
 
 
 # Example Usage

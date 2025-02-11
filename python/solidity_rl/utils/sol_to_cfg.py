@@ -13,9 +13,9 @@ Date: 2025-01-25
 This script is used to convert a SOL file to a CFG format.
 """
 
-DATA_DIR = pathlib.Path(__file__).parent.parent.parent / "data"
-CONTRACTS_DIR = DATA_DIR / "contracts"
-CFG_OUTPUT_DIR = DATA_DIR / "cfg"
+DATA_DIR = pathlib.Path(__file__).parent.parent / "data"
+CONTRACTS_DIR = DATA_DIR / "raw_contracts"
+CFG_OUTPUT_DIR = DATA_DIR / "processed" / "cfg"
 CFG_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -61,6 +61,22 @@ def main():
             print(f"CFG dot files saved to {CFG_OUTPUT_DIR.resolve()}")
 
 
+
+def convert_sol_to_cfg(sol_pth: str):
+    """
+    Convert a SOL file to a CFG format.
+    """
+    subprocess.run(["slither", str(sol_pth), "--print", "cfg"], check=True)
+    time.sleep(1)
+
+    # move dot files to data\\processed\\cfg\\<contract_name>
+    contract_name = sol_pth.split("/")[-1].split(".")[0]
+    cfg_dir = CFG_OUTPUT_DIR / contract_name
+    for file in os.listdir(CFG_OUTPUT_DIR):
+        if file.endswith(".dot"):
+            shutil.move(CFG_OUTPUT_DIR / file, cfg_dir / file)
+
+    return cfg_dir
 
 if __name__ == "__main__":
     main()

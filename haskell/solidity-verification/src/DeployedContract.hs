@@ -8,17 +8,19 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import System.Directory (doesFileExist)
-
+import System.Directory (removeDirectoryRecursive)
 -- Function to compile a Solidity contract using solc
 compileContract :: FilePath -> IO (Maybe (BS.ByteString, BS.ByteString))
 compileContract contractPath = do
-    let outputDir = "build"
+    let c_name = reverse . takeWhile (/= '.') . reverse $ takeWhile (/= '/') contractPath
+    let outputDir = "build/" ++ c_name
+    -- clean the output directory
+    removeDirectoryRecursive outputDir
     let solcCmd = ["--abi", "--bin", contractPath, "-o", outputDir]
     _ <- readProcess "solc" solcCmd ""
-    
-    let contractName = takeWhile (/= '.') $ reverse $ takeWhile (/= '/') $ reverse contractPath
-    let binPath = outputDir ++ "/" ++ contractName ++ ".bin"
-    let abiPath = outputDir ++ "/" ++ contractName ++ ".abi"
+
+    let binPath = outputDir ++ "/" ++ c_name ++ ".bin"
+    let abiPath = outputDir ++ "/" ++ c_name ++ ".abi"
 
     binExists <- doesFileExist binPath
     abiExists <- doesFileExist abiPath
@@ -44,9 +46,6 @@ compareContracts contractPath1 contractPath2 = do
     case (compiled1, compiled2) of
         (Just (bytecode1, _), Just (bytecode2, _)) ->
             if compareBytecode bytecode1 bytecode2
-                then putStrLn "Contracts are functionally equivalent (bytecode matches)."
-                else putStrLn "Contracts differ in functionality (bytecode mismatch)."
+                then putStrLn "Contracts are functionally equivalent."
+                else putStrLn "Contracts differ in functionality."
         _ -> putStrLn "Error: Failed to compile one or both contracts."
-
-
-

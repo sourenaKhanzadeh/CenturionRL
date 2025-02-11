@@ -71,7 +71,8 @@ executable solidity-verification
                         process,
                         text,
                         bytestring,
-                        directory
+                        directory,
+                        filepath
 
     -- Directories containing source files.
     hs-source-dirs:   src, app

@@ -12,7 +12,7 @@ contract SampleContract {
     }
 
     function increment() public {
-        count -= 1;
+        count += 1;
         emit Increment(msg.sender, count);
     }
 

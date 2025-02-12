@@ -61,18 +61,36 @@ executable solidity-verification
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules:    DeployedContract
+    other-modules:    SBV
 
     -- LANGUAGE extensions used by modules in this package.
     other-extensions: OverloadedStrings
 
     -- Other library packages from which modules are imported.
-    build-depends:      base >=4.7 && < 5,
-                        process,
-                        text,
-                        bytestring,
-                        directory,
-                        filepath
+    build-depends:
+        base >= 4.11 && < 4.19,
+        web3-ethereum,
+        regex-tdfa >=1.2,
+        jsonrpc-tinyclient,
+        memory-hexstring,
+        web3-crypto,
+        web3-solidity,
+        crypton,
+        aeson,
+        text,
+        bytestring,
+        process,
+        directory,
+        base16-bytestring,
+        vector,
+        sbv
+
+
+
+
+
+
+                        
 
     -- Directories containing source files.
     hs-source-dirs:   src, app

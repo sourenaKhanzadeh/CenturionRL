@@ -18,3 +18,6 @@ target/
 logs/
 
 solidity_rl.egg-info/
+dist-newstyle/
+build/
+.stack-work/
